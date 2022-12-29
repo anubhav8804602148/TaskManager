@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en-US" xmlns:th="http://www.thymeleaf.org">
+	<head>
+		<meta charset="ISO-8859-1">
+		<title>Task Manager</title>
+		<link rel="icon" href="images/appIcon.png">
+		<script src="js/jquery.js" ></script>
+		<script src="js/jquery-ui.js" ></script>
+		<script src="js/bootstrap.js" ></script>
+		<script src="js/multiselect.js" ></script>
+		<link rel="stylesheet" href="css/bootstrap.css">
+		<link rel="stylesheet" href="css/multiselect.css">		
+	</head>
+	<body>
+		<div id="loading"><img id="loadingImg" src="images/spinner.gif" alt="loading"></div>
+		<div id="header" class="col-sm-12">
+			<div class="col-sm-1"><img src="images/appIcon.png" alt="AppIcon" width=40px></div>
+			<div class="col-sm-8"><h1 id="headerText">Task Manager</h1></div>
+			<div class="col-sm-3" id="actionIconGroupHeader">
+				<a onclick="showCreateNewTaskModal()"><img class="actionIconHeader" src="images/newIcon.png" alt="Create New" title="Create New" width=25px></a>
+				<a th:href="@{download/exportToExcel}"><img class="actionIconHeader" src="images/excelIcon.png" alt="Export to Excel" title="Export to Excel" width=25px></a>
+				<a th:href="@{download/exportToCSV}"><img class="actionIconHeader" src="images/csvIcon.png" alt="Export to CSV" title="Export to CSV" width=25px></a>
+				<a th:href="@{download/exportToPDF}"><img class="actionIconHeader" src="images/pdfIcon.png" alt="Export to PDF" title="Export to PDF" width=25px></a>		
+				<a th:href="@{download/exportToPPT}"><img class="actionIconHeader" src="images/pptIcon.png" alt="Export to PPT" title="Export to PPT" width=25px></a>		
+			</div>
+		</div>
+		<table id="container">
+			<caption>All Tasks</caption>
+			<tr>
+				<th></th>
+				<th>Title</th>
+				<th>Description</th>
+				<th>Priority</th>
+			</tr>
+			<tr th:each="task : ${allTasks}" th:classappend="'PRIORITY_'+${task.priority}">
+				<td class="statusColumn col-sm-12">
+					<span th:switch="${task.status}" class="col-sm-4">
+						<img width=18px th:case="COMPLETED" title="Completed" src="images/startDisabledIcon.png" alt="Completed">
+						<a th:href="@{'updateStatus/'+${task.id}+'/WORKING'}"><img width=18px th:case="ERROR" title="Start" src="images/startIcon.png" alt="Error"></a>
+						<a th:href="@{'updateStatus/'+${task.id}+'/WORKING'}"><img width=18px th:case="PENDING" title="Start" src="images/startIcon.png" alt="Pending"></a>
+						<a th:href="@{'updateStatus/'+${task.id}+'/PENDING'}"><img width=18px th:case="WORKING" title="Stop" src="images/stopIcon.png" alt="Working"></a>
+					</span>
+					<span th:switch="${task.status}" class="col-sm-4">
+						<img width=18px th:case="COMPLETED" title="Completed" src="images/startDisabledIcon.png" alt="Completed">
+						<a th:href="@{'updateStatus/'+${task.id}+'/COMPLETED'}"><img width=18px th:case="ERROR" title="Mark Completed" src="images/completedIcon.png" alt="Error"></a>
+						<a th:href="@{'updateStatus/'+${task.id}+'/COMPLETED'}"><img width=18px th:case="PENDING" title="Mark Completed" src="images/completedIcon.png" alt="Pending"></a>
+						<a th:href="@{'updateStatus/'+${task.id}+'/COMPLETED'}"><img width=18px th:case="WORKING" title="Mark Completed" src="images/completedIcon.png" alt="Working"></a>
+					</span>
+					<span th:switch="${task.status}" class="col-sm-4">
+						<img width=18px th:case="COMPLETED" title="Completed" src="images/restartDisabledIcon.png" alt="Completed">
+						<img width=18px th:case="ERROR" title="Error" src="images/restartIcon.png" alt="Error">
+						<a th:href="@{'updateStatus/'+${task.id}+'/ERROR'}"><img width=18px th:case="PENDING" title="Throw Error" src="images/errorIcon.png" alt="Pending"></a>
+						<a th:href="@{'updateStatus/'+${task.id}+'/ERROR'}"><img width=18px th:case="WORKING" title="Throw Error" src="images/errorIcon.png" alt="Working"></a>
+					</span>
+				</td>
+				<td><label th:text="${task.title}"></label></td>
+				<td><label th:text="${task.description}"></label></td>
+				<td th:switch="${task.priority}">				
+					<label th:case=0 th:text="0-CRITICAL"></label>	
+					<label th:case=1 th:text="CRITICAL"></label>	
+					<label th:case=2 th:text="HIGH"></label>	
+					<label th:case=3 th:text="MEDIUM"></label>
+					<label th:case=4 th:text="LOW"></label>
+				</td>
+				<td><button th:onClick="'showDeleteTaskModal('+${task.id}+')'" class="no-button"><img class="actionIcon" width=15px src="images/deleteIcon.png" title="Delete" alt="delete"></button></td>
+				<td><button th:onClick="'showEditTaskModal('+${task.id}+')'" class="no-button"><img class="actionIcon" width=15px src="images/editIcon.png" title="Edit" alt="edit"></button></td>
+				<td><label th:text="${task.status}" th:classappend="${task.status}+'_STATUS'"></label></td>
+			</tr>
+		</table>
+		<div id="updateTaskModal">
+			
+		</div>
+		<div class="modal fade" tabindex="-1" role="dialog" id="deleteTaskModal">
+			<div class="modal-dialog" role="document">
+				<div class="modal-content">
+					<form th:object="${newTask}" th:action="@{/deleteTask}" action="#" method="POST">
+						<h4 class="modal-header">Delete Task?</h4>
+						<input class="invisible-field" type="number" id="idToDelete" th:field="*{id}">
+						<button class="btn-danger" type="reset" onclick="hideDeleteTaskModal()">Cancel</button>						
+						<button class="btn-default" type="submit">Submit</button><br><br>
+					</form>
+				</div>
+			</div>
+		</div>
+		
+		<div class="modal fade" id="createNewTaskModal" tabindex="-1" role="dialog">
+			<div class="modal-dialog" role="document">
+				<div class="modal-content">
+					<form th:object="${newTask}" th:action="@{/task}" action="#" method="post">
+						<table class="modal-content-table">
+							<caption class="modal-header">New Task</caption>
+							<tr><th></th><th></th></tr>
+							<tr><td><label>Title</label></td><td><input pattern="[0-9A-Za-z ]{3,50}" th:field="*{title}" type="text" required></td></tr>
+							<tr><td><label>Description</label></td><td><textarea minlength=5 th:field="*{description}" required></textarea></tr>
+							<tr><td><label>Priority</label></td><td>
+								<select th:field="*{priority}">
+									<option value=4>4</option>
+									<option value=3>3</option>
+									<option value=2>2</option>
+									<option value=1>1</option>
+									<option value=0>0</option>
+								</select>
+							</td></tr>
+							<tr><td colspan=2><span style="font-size:10px">*Title : No special character allowed<br>*Description : min length=5</span></td></tr>
+							<tr><td></td><td>
+								<button class="btn-danger" type="reset" onclick="hideCreateNewTaskModal()">Cancel</button>						
+								<input type="submit">
+							</tr>
+						</table>
+					</form>
+				</div>
+			</div>
+		</div>
+	</body>
+	<script th:inline="javascript" type="text/javascript">
+		var hideCreateNewTaskModal = () => {
+			$("#createNewTaskModal").hide();			
+		}
+		var showCreateNewTaskModal = () => {
+			$("#createNewTaskModal").show();
+		}
+		var showDeleteTaskModal = (id) => {
+			$("#idToDelete").val(id);
+			$("#deleteTaskModal").show();
+		}
+		var hideDeleteTaskModal = () => {
+			$("#deleteTaskModal").hide();
+		}
+		var showEditTaskModal = () => {
+			$("#editTaskModal").show();
+		}
+		var hideEditTaskModal = () => {
+			$("#editTaskModal").hide();
+		}
+		$(document).ready(function(){
+			$("#loading").hide();
+			var createNewTaskModal = $('#createNewTaskModal');
+			createNewTaskModal.modal({backdrop: false, show: true});
+			var deleteTaskModal = $('#deleteTaskModal');
+			deleteTaskModal.modal({backdrop: false, show: true});
+
+		    $('.modal-dialog').draggable({
+		      handle: ".modal-content"
+		    });
+			$("#createNewTaskModal").hide();
+			$("#deleteTaskModal").hide();
+		});		
+	</script>
+	<style>
+		.invisible-field{
+			display:none;
+		}
+		.no-button{
+			background:none;
+			border:1px solid red;
+			padding:0px;
+		}
+		.modal-header{
+			width:100%;
+		}
+		.modal-content-table{
+			margin:5%;
+		}
+		.modal-content{
+			width:60%;
+			padding-left:5%;
+		}
+		#createNewTaskModal{
+			position:absolute;
+			top:0;
+			left:0;
+			width:100%;
+			height:100%;
+			z-index:2;
+			display:none;
+		}
+		#deleteTaskModal{
+			position:absolute;
+			top:0;
+			left:0;
+			width:100%;
+			height:100%;
+			z-index:2;
+		}
+		#loading {
+		    position: absolute;
+		    top: 0%;
+		    left: 0%;
+		    height: 100%;
+		    width: 100%;
+		    z-index: 9999999;
+		    background-color: rgba(0,0,0,0.5);
+		}
+		#loadingImg{
+			position: absolute;
+			top:15%;
+			left:30%;
+			width:40%;
+		}
+		#header{
+			position:absolute;
+			top:0;
+			left:0;
+			width:100%;
+			height:10%;
+			padding-right:5vw;
+			background-color:red;
+			color:white;
+		}
+		#header img{
+			margin-top:5vh;
+		}
+		#container{
+			position:absolute;
+			top:11%;
+			left:5%;
+			width:90%;	
+		}
+		table > caption{
+			font-size:20px;
+			margin-left:40%;
+		}
+		.actionIcon{
+			margin-left:1vw;
+			margin-right:1vw;
+		}
+		#headerText{
+			margin-top:-0.1vh;
+		}
+		.actionIconHeader{
+			margin-left:0.25vw;
+			margin-right:0.25vw;
+			border:5px solid white;
+		}
+		.statusColumn{
+			width:120px;
+		}
+		.ERROR_STATUS{
+			color:red;
+		}
+		.COMPLETED_STATUS{
+			color:green;
+		}
+		.WORKING_STATUS{
+			color:rgba(0,100,200,1);;
+		}
+		.PENDING_STATUS{
+			color:orange;
+		}
+		.PRIORITY_0{
+			background-color:rgba(255,0,0,0.5);
+		}
+		.PRIORITY_1{
+			background-color:rgba(255,0,0,0.2);
+		}
+		.PRIORITY_2{
+			background-color:rgba(255,0,0,0.1);
+		}
+		.PRIORITY_3{
+			background-color:rgba(255,0,0,0.05);
+		}
+		th{
+			text-align:center;
+		}
+		td,th,tr {
+			padding: 2px;
+		}
+		td{
+			max-width:500px;
+			overflow:wrap;
+			padding:10px;
+		}
+		textarea{
+			resize:none;
+		}
+	</style>
+</html>
